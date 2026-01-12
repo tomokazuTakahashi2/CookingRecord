@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cooking_record/features/cooking_record/model/cooking_record.dart';
 import 'package:cooking_record/features/cooking_record/widget/placeholder_image.dart';
 import 'package:cooking_record/features/cooking_record/widget/header_app_bar.dart';
+import 'package:cooking_record/features/cooking_record/widget/rating_stars.dart';
 
 class RecordDetailPage extends StatelessWidget {
   const RecordDetailPage({
@@ -57,6 +58,21 @@ class RecordDetailPage extends StatelessWidget {
               Text(
                 '作成日時: ${_formatDate(record.createdAt)}',
                 style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '評価',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: RatingStars(
+                  rating: record.rating,
+                  readOnly: true,
+                ),
               ),
               if (record.memo != null && record.memo!.isNotEmpty) ...[
                 const SizedBox(height: 16),

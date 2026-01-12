@@ -26,6 +26,7 @@ mixin _$CookingRecord {
   String? get memo => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   String? get photoPath => throw _privateConstructorUsedError;
+  int get rating => throw _privateConstructorUsedError;
 
   /// Serializes this CookingRecord to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -50,6 +51,7 @@ abstract class $CookingRecordCopyWith<$Res> {
     String? memo,
     DateTime createdAt,
     String? photoPath,
+    int rating,
   });
 }
 
@@ -73,6 +75,7 @@ class _$CookingRecordCopyWithImpl<$Res, $Val extends CookingRecord>
     Object? memo = freezed,
     Object? createdAt = null,
     Object? photoPath = freezed,
+    Object? rating = null,
   }) {
     return _then(
       _value.copyWith(
@@ -96,6 +99,10 @@ class _$CookingRecordCopyWithImpl<$Res, $Val extends CookingRecord>
                 ? _value.photoPath
                 : photoPath // ignore: cast_nullable_to_non_nullable
                       as String?,
+            rating: null == rating
+                ? _value.rating
+                : rating // ignore: cast_nullable_to_non_nullable
+                      as int,
           )
           as $Val,
     );
@@ -117,6 +124,7 @@ abstract class _$$CookingRecordImplCopyWith<$Res>
     String? memo,
     DateTime createdAt,
     String? photoPath,
+    int rating,
   });
 }
 
@@ -139,6 +147,7 @@ class __$$CookingRecordImplCopyWithImpl<$Res>
     Object? memo = freezed,
     Object? createdAt = null,
     Object? photoPath = freezed,
+    Object? rating = null,
   }) {
     return _then(
       _$CookingRecordImpl(
@@ -162,6 +171,10 @@ class __$$CookingRecordImplCopyWithImpl<$Res>
             ? _value.photoPath
             : photoPath // ignore: cast_nullable_to_non_nullable
                   as String?,
+        rating: null == rating
+            ? _value.rating
+            : rating // ignore: cast_nullable_to_non_nullable
+                  as int,
       ),
     );
   }
@@ -176,6 +189,7 @@ class _$CookingRecordImpl implements _CookingRecord {
     this.memo,
     required this.createdAt,
     this.photoPath,
+    this.rating = 0,
   });
 
   factory _$CookingRecordImpl.fromJson(Map<String, dynamic> json) =>
@@ -191,10 +205,13 @@ class _$CookingRecordImpl implements _CookingRecord {
   final DateTime createdAt;
   @override
   final String? photoPath;
+  @override
+  @JsonKey()
+  final int rating;
 
   @override
   String toString() {
-    return 'CookingRecord(id: $id, dishName: $dishName, memo: $memo, createdAt: $createdAt, photoPath: $photoPath)';
+    return 'CookingRecord(id: $id, dishName: $dishName, memo: $memo, createdAt: $createdAt, photoPath: $photoPath, rating: $rating)';
   }
 
   @override
@@ -209,13 +226,21 @@ class _$CookingRecordImpl implements _CookingRecord {
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.photoPath, photoPath) ||
-                other.photoPath == photoPath));
+                other.photoPath == photoPath) &&
+            (identical(other.rating, rating) || other.rating == rating));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, id, dishName, memo, createdAt, photoPath);
+  int get hashCode => Object.hash(
+    runtimeType,
+    id,
+    dishName,
+    memo,
+    createdAt,
+    photoPath,
+    rating,
+  );
 
   /// Create a copy of CookingRecord
   /// with the given fields replaced by the non-null parameter values.
@@ -238,6 +263,7 @@ abstract class _CookingRecord implements CookingRecord {
     final String? memo,
     required final DateTime createdAt,
     final String? photoPath,
+    final int rating,
   }) = _$CookingRecordImpl;
 
   factory _CookingRecord.fromJson(Map<String, dynamic> json) =
@@ -253,6 +279,8 @@ abstract class _CookingRecord implements CookingRecord {
   DateTime get createdAt;
   @override
   String? get photoPath;
+  @override
+  int get rating;
 
   /// Create a copy of CookingRecord
   /// with the given fields replaced by the non-null parameter values.

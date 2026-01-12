@@ -76,6 +76,7 @@ class CookingRecordRepository {
         'memo': record[DatabaseHelper.columnMemo] as String?,
         'createdAt': DateTime.parse(record[DatabaseHelper.columnCreatedAt] as String).toIso8601String(),
         'photoPath': fullPhotoPath,
+        'rating': record[DatabaseHelper.columnRating] as int? ?? 0,
       });
     }).toList();
   }
@@ -119,6 +120,7 @@ class CookingRecordRepository {
         DatabaseHelper.columnPhotoPath: relativePhotoPath,
         DatabaseHelper.columnMemo: record.memo,
         DatabaseHelper.columnCreatedAt: record.createdAt.toIso8601String(),
+        DatabaseHelper.columnRating: record.rating,
       },
     );
   }
@@ -160,6 +162,7 @@ class CookingRecordRepository {
         DatabaseHelper.columnDishName: record.dishName,
         DatabaseHelper.columnPhotoPath: relativePhotoPath,
         DatabaseHelper.columnMemo: record.memo,
+        DatabaseHelper.columnRating: record.rating,
       },
       where: '${DatabaseHelper.columnId} = ?',
       whereArgs: [record.id],

@@ -8,6 +8,7 @@ import 'package:cooking_record/features/cooking_record/model/cooking_record.dart
 import 'package:cooking_record/features/cooking_record/provider/cooking_record_provider.dart';
 import 'package:cooking_record/features/cooking_record/widget/placeholder_image.dart';
 import 'package:cooking_record/features/cooking_record/widget/header_app_bar.dart';
+import 'package:cooking_record/features/cooking_record/widget/rating_stars.dart';
 
 class RecordAddPage extends ConsumerStatefulWidget {
   const RecordAddPage({super.key});
@@ -21,6 +22,7 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
   final _dishNameController = TextEditingController();
   final _memoController = TextEditingController();
   String? _imagePath;
+  int _rating = 0;
 
   @override
   void dispose() {
@@ -78,50 +80,51 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
   }
 
   Future<void> _saveRecord() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        String? savedImagePath;
-        if (_imagePath != null) {
-          try {
-            final sourceFile = File(_imagePath!);
-            if (await sourceFile.exists()) {
-              final appDir = await getApplicationDocumentsDirectory();
-              final fileName = '${const Uuid().v4()}.jpg';
-              final savedImage = File('${appDir.path}/$fileName');
-              await sourceFile.copy(savedImage.path);
-              savedImagePath = savedImage.path;
-              debugPrint('Saved image to: $savedImagePath');
-            } else {
-              debugPrint('Source image not found: $_imagePath');
-            }
-          } catch (e) {
-            debugPrint('Error saving image: $e');
-            rethrow;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    try {
+      String? savedImagePath;
+      if (_imagePath != null) {
+        try {
+          final sourceFile = File(_imagePath!);
+          if (await sourceFile.exists()) {
+            final appDir = await getApplicationDocumentsDirectory();
+            final fileName = '${const Uuid().v4()}.jpg';
+            final savedImage = File('${appDir.path}/$fileName');
+            await sourceFile.copy(savedImage.path);
+            savedImagePath = savedImage.path;
+            debugPrint('Saved image to: $savedImagePath');
+          } else {
+            debugPrint('Source image not found: $_imagePath');
           }
-        }
-
-        final record = CookingRecord(
-          id: const Uuid().v4(),
-          dishName: _dishNameController.text,
-          memo: _memoController.text.isEmpty ? null : _memoController.text,
-          createdAt: DateTime.now(),
-          photoPath: savedImagePath,
-        );
-
-        await ref.read(cookingRecordsProvider.notifier).addRecord(record);
-        if (mounted) {
-          Navigator.of(context).pop();
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('保存中にエラーが発生しました: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
+        } catch (e) {
+          debugPrint('Error saving image: $e');
+          rethrow;
         }
       }
+
+      final record = CookingRecord(
+        id: const Uuid().v4(),
+        dishName: _dishNameController.text,
+        memo: _memoController.text.isEmpty ? null : _memoController.text,
+        createdAt: DateTime.now(),
+        photoPath: savedImagePath,
+        rating: _rating,
+      );
+
+      await ref.read(cookingRecordsProvider.notifier).addRecord(record);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('保存中にエラーが発生しました: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      rethrow;
     }
   }
 
@@ -189,6 +192,29 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                 },
               ),
               const SizedBox(height: 16),
+              Center(
+                child: Column(
+                  children: [
+                    const Text(
+                      '評価',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    RatingStars(
+                      rating: _rating,
+                      onRatingChanged: (value) {
+                        setState(() {
+                          _rating = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _memoController,
                 decoration: const InputDecoration(
@@ -205,7 +231,14 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                   final isLoading = recordsAsync.isLoading;
 
                   return FilledButton(
-                    onPressed: isLoading ? null : _saveRecord,
+                    onPressed: isLoading 
+                        ? null 
+                        : () async {
+                            await _saveRecord();
+                            if (mounted && context.mounted) {
+                              Navigator.of(context).pop();
+                            }
+                          },
                     child: isLoading
                         ? const SizedBox(
                             width: 24,

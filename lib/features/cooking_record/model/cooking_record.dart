@@ -11,6 +11,7 @@ class CookingRecord with _$CookingRecord {
     String? memo,
     required DateTime createdAt,
     String? photoPath,
+    @Default(0) int rating,  // 0: ★なし、1: ★、2: ★★、3: ★★★
   }) = _CookingRecord;
 
   factory CookingRecord.fromJson(Map<String, dynamic> json) =>

@@ -7,6 +7,7 @@ import 'package:cooking_record/features/cooking_record/provider/cooking_record_p
 import 'package:cooking_record/features/cooking_record/model/cooking_record.dart';
 import 'package:cooking_record/features/cooking_record/widget/placeholder_image.dart';
 import 'package:cooking_record/features/cooking_record/widget/header_app_bar.dart';
+import 'package:cooking_record/features/cooking_record/widget/rating_stars.dart';
 
 class RecordListPage extends ConsumerWidget {
   const RecordListPage({super.key});
@@ -128,7 +129,18 @@ class RecordListTile extends StatelessWidget {
               size: 60,
               iconSize: 24,
             ),
-      title: Text(record.dishName),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(record.dishName),
+          ),
+          RatingStars(
+            rating: record.rating,
+            readOnly: true,
+            size: 20.0,
+          ),
+        ],
+      ),
       subtitle: Text(
         _formatDate(record.createdAt),
       ),

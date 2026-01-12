@@ -5,7 +5,7 @@ import 'dart:io';
 
 class DatabaseHelper {
   static const _databaseName = "cooking_record.db";
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 2;
 
   static const table = 'cooking_records';
 
@@ -14,6 +14,7 @@ class DatabaseHelper {
   static const columnPhotoPath = 'photo_path';
   static const columnMemo = 'memo';
   static const columnCreatedAt = 'created_at';
+  static const columnRating = 'rating';
 
   // シングルトンクラスにする
   DatabaseHelper._privateConstructor();
@@ -34,6 +35,7 @@ class DatabaseHelper {
       path,
       version: _databaseVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -45,8 +47,17 @@ class DatabaseHelper {
         $columnDishName TEXT NOT NULL,
         $columnPhotoPath TEXT,
         $columnMemo TEXT,
-        $columnCreatedAt TEXT NOT NULL
+        $columnCreatedAt TEXT NOT NULL,
+        $columnRating INTEGER NOT NULL DEFAULT 0
       )
     ''');
+  }
+
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        ALTER TABLE $table ADD COLUMN $columnRating INTEGER NOT NULL DEFAULT 0
+      ''');
+    }
   }
 }
