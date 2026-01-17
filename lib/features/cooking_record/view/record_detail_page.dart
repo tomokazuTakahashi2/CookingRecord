@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:cooking_record/features/cooking_record/model/cooking_record.dart';
 import 'package:cooking_record/features/cooking_record/widget/placeholder_image.dart';
 import 'package:cooking_record/features/cooking_record/widget/header_app_bar.dart';
@@ -20,6 +21,19 @@ class RecordDetailPage extends StatelessWidget {
       appBar: HeaderAppBar(
         title: '詳細',
         actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () {
+              final rating = '⭐' * record.rating;
+              final text = '''
+料理名: ${record.dishName}
+評価: $rating
+作成日時: ${_formatDate(record.createdAt)}
+${record.memo != null && record.memo!.isNotEmpty ? '\nメモ:\n${record.memo}' : ''}
+''';
+              Share.share(text);
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
