@@ -152,7 +152,6 @@
 				C264A126EB08646F00667F14 /* Pods-RunnerTests.release.xcconfig */,
 				5D6C304AC7785E7765A7059C /* Pods-RunnerTests.profile.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};

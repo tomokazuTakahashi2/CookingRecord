@@ -21,6 +21,7 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
   final _formKey = GlobalKey<FormState>();
   final _dishNameController = TextEditingController();
   final _memoController = TextEditingController();
+  final _referenceUrlController = TextEditingController();
   String? _imagePath;
   int _rating = 0;
 
@@ -28,6 +29,7 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
   void dispose() {
     _dishNameController.dispose();
     _memoController.dispose();
+    _referenceUrlController.dispose();
     super.dispose();
   }
 
@@ -112,6 +114,7 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
         createdAt: DateTime.now(),
         photoPath: savedImagePath,
         rating: _rating,
+        referenceUrl: _referenceUrlController.text.isEmpty ? null : _referenceUrlController.text,
       );
 
       await ref.read(cookingRecordsProvider.notifier).addRecord(record);
@@ -223,6 +226,28 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                 ),
                 validator: null,
                 maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _referenceUrlController,
+                decoration: const InputDecoration(
+                  labelText: '参考URL',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.url,
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    try {
+                      final uri = Uri.parse(value);
+                      if (!uri.isScheme('http') && !uri.isScheme('https')) {
+                        return 'URLはhttpまたはhttpsで始まる必要があります';
+                      }
+                    } catch (e) {
+                      return '有効なURLを入力してください';
+                    }
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 32),
               Consumer(

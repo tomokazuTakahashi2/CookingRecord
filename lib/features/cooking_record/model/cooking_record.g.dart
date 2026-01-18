@@ -14,6 +14,7 @@ _$CookingRecordImpl _$$CookingRecordImplFromJson(Map<String, dynamic> json) =>
       createdAt: DateTime.parse(json['createdAt'] as String),
       photoPath: json['photoPath'] as String?,
       rating: (json['rating'] as num?)?.toInt() ?? 0,
+      referenceUrl: json['referenceUrl'] as String?,
     );
 
 Map<String, dynamic> _$$CookingRecordImplToJson(_$CookingRecordImpl instance) =>
@@ -24,4 +25,5 @@ Map<String, dynamic> _$$CookingRecordImplToJson(_$CookingRecordImpl instance) =>
       'createdAt': instance.createdAt.toIso8601String(),
       'photoPath': instance.photoPath,
       'rating': instance.rating,
+      'referenceUrl': instance.referenceUrl,
     };

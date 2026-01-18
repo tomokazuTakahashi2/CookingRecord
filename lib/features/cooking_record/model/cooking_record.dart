@@ -12,6 +12,7 @@ class CookingRecord with _$CookingRecord {
     required DateTime createdAt,
     String? photoPath,
     @Default(0) int rating,  // 0: ★なし、1: ★、2: ★★、3: ★★★
+    String? referenceUrl,
   }) = _CookingRecord;
 
   factory CookingRecord.fromJson(Map<String, dynamic> json) =>

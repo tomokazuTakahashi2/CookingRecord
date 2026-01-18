@@ -26,6 +26,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _dishNameController;
   late final TextEditingController _memoController;
+  late final TextEditingController _referenceUrlController;
   String? _imagePath;
   late int _rating;
 
@@ -34,6 +35,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
     super.initState();
     _dishNameController = TextEditingController(text: widget.record.dishName);
     _memoController = TextEditingController(text: widget.record.memo ?? '');
+    _referenceUrlController = TextEditingController(text: widget.record.referenceUrl ?? '');
     _imagePath = widget.record.photoPath;
     _rating = widget.record.rating;
   }
@@ -42,6 +44,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
   void dispose() {
     _dishNameController.dispose();
     _memoController.dispose();
+    _referenceUrlController.dispose();
     super.dispose();
   }
 
@@ -126,6 +129,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
         createdAt: widget.record.createdAt,
         photoPath: savedImagePath ?? _imagePath,
         rating: _rating,
+        referenceUrl: _referenceUrlController.text.isEmpty ? null : _referenceUrlController.text,
       );
 
       await ref.read(cookingRecordsProvider.notifier).updateRecord(updatedRecord);
@@ -238,6 +242,28 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                 ),
                 validator: null,
                 maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _referenceUrlController,
+                decoration: const InputDecoration(
+                  labelText: '参考URL',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.url,
+                validator: (value) {
+                  if (value != null && value.isNotEmpty) {
+                    try {
+                      final uri = Uri.parse(value);
+                      if (!uri.isScheme('http') && !uri.isScheme('https')) {
+                        return 'URLはhttpまたはhttpsで始まる必要があります';
+                      }
+                    } catch (e) {
+                      return '有効なURLを入力してください';
+                    }
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 32),
               Consumer(

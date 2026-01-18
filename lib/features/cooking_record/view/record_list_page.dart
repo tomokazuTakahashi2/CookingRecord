@@ -18,7 +18,24 @@ class RecordListPage extends ConsumerWidget {
     final recordsAsync = ref.watch(cookingRecordsProvider);
 
     return Scaffold(
-      appBar: const HeaderAppBar(title: '自炊記録'),
+      appBar: HeaderAppBar(
+        title: '自炊記録',
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'privacy_policy') {
+                context.push('/privacy-policy');
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'privacy_policy',
+                child: Text('プライバシーポリシー'),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: SafeArea(
         child: recordsAsync.when(
           data: (records) {

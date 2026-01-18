@@ -4,6 +4,7 @@ import 'package:cooking_record/features/cooking_record/view/record_list_page.dar
 import 'package:cooking_record/features/cooking_record/view/record_add_page.dart';
 import 'package:cooking_record/features/cooking_record/view/record_detail_page.dart';
 import 'package:cooking_record/features/cooking_record/view/record_edit_page.dart';
+import 'package:cooking_record/features/cooking_record/view/privacy_policy_page.dart';
 import 'package:cooking_record/features/cooking_record/provider/cooking_record_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -71,6 +72,10 @@ final router = GoRouter(
           },
         );
       },
+    ),
+    GoRoute(
+      path: '/privacy-policy',
+      builder: (context, state) => const PrivacyPolicyPage(),
     ),
   ],
 );

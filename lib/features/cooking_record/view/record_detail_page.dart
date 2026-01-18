@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:cooking_record/features/cooking_record/model/cooking_record.dart';
 import 'package:cooking_record/features/cooking_record/widget/placeholder_image.dart';
 import 'package:cooking_record/features/cooking_record/widget/header_app_bar.dart';
@@ -30,6 +31,7 @@ class RecordDetailPage extends StatelessWidget {
 評価: $rating
 作成日時: ${_formatDate(record.createdAt)}
 ${record.memo != null && record.memo!.isNotEmpty ? '\nメモ:\n${record.memo}' : ''}
+${record.referenceUrl != null && record.referenceUrl!.isNotEmpty ? '\n参考URL:\n${record.referenceUrl}' : ''}
 ''';
               Share.share(text);
             },
@@ -101,6 +103,32 @@ ${record.memo != null && record.memo!.isNotEmpty ? '\nメモ:\n${record.memo}' :
                 Text(
                   record.memo!,
                   style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+              if (record.referenceUrl != null && record.referenceUrl!.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  '参考URL',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () async {
+                    final url = Uri.parse(record.referenceUrl!);
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url);
+                    }
+                  },
+                  child: Text(
+                    record.referenceUrl!,
+                    style: TextStyle(
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
                 ),
               ],
             ],
