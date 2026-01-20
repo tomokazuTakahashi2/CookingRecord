@@ -151,149 +151,152 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
     return Scaffold(
       appBar: const HeaderAppBar(title: '記録を編集'),
       body: SafeArea(
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              GestureDetector(
-                onTap: _pickImage,
-                child: Container(
-                  height: 180,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: _imagePath != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            File(_imagePath!),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const PlaceholderImage();
-                            },
-                          ),
-                        )
-                      : const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 120,
-                              height: 120,
-                              child: PlaceholderImage(
-                                iconSize: 24,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'タップして写真を追加',
-                              style: TextStyle(
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _dishNameController,
-                decoration: const InputDecoration(
-                  labelText: '料理名',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '料理名を入力してください';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              Center(
-                child: Column(
-                  children: [
-                    const Text(
-                      '評価',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+        child: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    height: 180,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(height: 8),
-                    RatingStars(
-                      rating: _rating,
-                      onRatingChanged: (value) {
-                        setState(() {
-                          _rating = value;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _memoController,
-                decoration: const InputDecoration(
-                  labelText: 'メモ',
-                  border: OutlineInputBorder(),
-                ),
-                validator: null,
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _referenceUrlController,
-                decoration: const InputDecoration(
-                  labelText: '参考URL',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.url,
-                validator: (value) {
-                  if (value != null && value.isNotEmpty) {
-                    try {
-                      final uri = Uri.parse(value);
-                      if (!uri.isScheme('http') && !uri.isScheme('https')) {
-                        return 'URLはhttpまたはhttpsで始まる必要があります';
-                      }
-                    } catch (e) {
-                      return '有効なURLを入力してください';
-                    }
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 32),
-              Consumer(
-                builder: (context, ref, child) {
-                  final recordsAsync = ref.watch(cookingRecordsProvider);
-                  final isLoading = recordsAsync.isLoading;
-
-                  return FilledButton(
-                    onPressed: isLoading 
-                        ? null 
-                        : () async {
-                            await _saveRecord();
-                            if (mounted && context.mounted) {
-                              Navigator.of(context).pop();
-                            }
-                          },
-                    child: isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    child: _imagePath != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              File(_imagePath!),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return const PlaceholderImage();
+                              },
                             ),
                           )
-                        : const Text('保存'),
-                  );
-                },
-              ),
-            ],
+                        : const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 120,
+                                height: 120,
+                                child: PlaceholderImage(
+                                  iconSize: 24,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'タップして写真を追加',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _dishNameController,
+                  decoration: const InputDecoration(
+                    labelText: '料理名',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return '料理名を入力してください';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Column(
+                    children: [
+                      const Text(
+                        '評価',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      RatingStars(
+                        rating: _rating,
+                        onRatingChanged: (value) {
+                          setState(() {
+                            _rating = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _memoController,
+                  decoration: const InputDecoration(
+                    labelText: 'メモ',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: null,
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _referenceUrlController,
+                  decoration: const InputDecoration(
+                    labelText: '参考URL',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.url,
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      try {
+                        final uri = Uri.parse(value);
+                        if (!uri.isScheme('http') && !uri.isScheme('https')) {
+                          return 'URLはhttpまたはhttpsで始まる必要があります';
+                        }
+                      } catch (e) {
+                        return '有効なURLを入力してください';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 32),
+                Consumer(
+                  builder: (context, ref, child) {
+                    final recordsAsync = ref.watch(cookingRecordsProvider);
+                    final isLoading = recordsAsync.isLoading;
+
+                    return FilledButton(
+                      onPressed: isLoading 
+                          ? null 
+                          : () async {
+                              await _saveRecord();
+                              if (mounted && context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            },
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text('保存'),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
