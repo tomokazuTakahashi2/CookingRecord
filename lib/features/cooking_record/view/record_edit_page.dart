@@ -386,7 +386,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                 Consumer(
                   builder: (context, ref, child) {
                     final recordsAsync = ref.watch(cookingRecordsProvider);
-                    final isLoading = recordsAsync.isLoading;
+                    final isLoading = recordsAsync is AsyncLoading;
 
                     // 有効条件: 保存中でなく && 変更あり && 料理名が入力済み && URL検証に合格
                     final canSave = !_isSaving && !isLoading && _hasChanges && _dishNameController.text.trim().isNotEmpty && _hasValidUrl();
@@ -452,23 +452,29 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
 
                                 debugPrint('SAVE: before updateRecord');
                                 
-                                // 直接リポジトリで保存（Providerを介さない）
-                                final repository = ref.read(cookingRecordRepositoryProvider);
-                                await repository.updateRecord(updatedRecord);
+                                try {
+                                  // Providerを使用して保存 - mounted チェック前に結果受け取り
+                                  final success = await ref.read(cookingRecordsProvider.notifier).updateRecord(updatedRecord);
+                                  debugPrint('SAVE: updateRecord completed with success=$success');
                                 
-                                debugPrint('SAVE: after updateRecord (line A)');
-                                await Future<void>.delayed(Duration.zero);
-                                debugPrint('SAVE: before pop (line B)');
+                                  // mounted チェックを先に行い、安全なら pop
+                                  if (!mounted) {
+                                    debugPrint('SAVE: not mounted (line C) - but save was successful=$success');
+                                    return; // 画面が既に破棄されている場合は何もしない
+                                  }
                                 
-                                // 画面を閉じる
-                                if (!mounted) {
-                                  debugPrint('SAVE: not mounted (line C)');
-                                  return;
+                                  // 画面が生きているなら pop
+                                  debugPrint('SAVE: about to pop with success=$success');
+                                  context.pop(success);
+                                  debugPrint('SAVE: popped (line D)');
+                                } catch (e) {
+                                  debugPrint('SAVE: updateRecord error: $e');
+                                  // エラー時、画面が生きてたらスナックバーを表示
+                                  if (mounted) {
+                                    showSnack('保存中にエラー: $e', color: Colors.red);
+                                  }
+                                  throw e; // 再スロー
                                 }
-                                
-                                debugPrint('SAVE: about to pop');
-                                context.pop(true);
-                                debugPrint('SAVE: popped (line D)');
                                 
                               } catch (e, st) {
                                 debugPrint('SAVE: error=$e\n$st');

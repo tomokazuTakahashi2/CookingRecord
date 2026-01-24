@@ -185,27 +185,10 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
         referenceUrl: _referenceUrlController.text.isEmpty ? null : _referenceUrlController.text,
       );
 
-      // Try direct repository access instead of going through provider
-      debugPrint('SAVE: Using direct save method to bypass provider complexity');
-      final repository = ref.read(cookingRecordRepositoryProvider);
-      
-      // Use the simpler direct save method first
-      final directResult = await repository.saveRecordDirect(record);
-      debugPrint('SAVE: Direct save result: $directResult');
-      
-      if (directResult) {
-        // If direct save worked, update UI via provider (but don't wait for it)
-        debugPrint('SAVE: Updating provider state asynchronously');
-        ref.read(cookingRecordsProvider.notifier).getRecords().then(
-          (value) => debugPrint('SAVE: Provider state updated successfully'),
-          onError: (e) => debugPrint('SAVE: Provider state update failed: $e'),
-        );
-        
-        debugPrint('SAVE: Direct save completed successfully');
-      } else {
-        debugPrint('SAVE: Direct save failed');
-        throw Exception('直接保存に失敗しました');
-      }
+      // Use provider for saving
+      debugPrint('SAVE: Using provider to save record');
+      await ref.read(cookingRecordsProvider.notifier).addRecord(record);
+      debugPrint('SAVE: Provider save completed successfully');
       return true; // Success
     } catch (e) {
       showSnack('保存中にエラーが発生しました: $e', color: Colors.red);
@@ -355,7 +338,7 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                 Consumer(
                   builder: (context, ref, _) {
                     final recordsAsync = ref.watch(cookingRecordsProvider);
-                    final isLoading = recordsAsync.isLoading;
+                    final isLoading = recordsAsync is AsyncLoading;
                     
                     // 有効条件: 保存中でなく && ロード中でなく && 料理名が入力済み && URL検証に合格
                     final canSave = !_isSaving 
@@ -389,9 +372,6 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                           debugPrint('SAVE: start');
                           debugPrint('SAVE: before addRecord');
                           
-                          // 保存処理実行 - 直接リポジトリを使用
-                          final repository = ref.read(cookingRecordRepositoryProvider);
-                          
                           // レコード作成
                           String? savedImagePath;
                           if (_imagePath != null && _isNewImagePick) {
@@ -423,28 +403,32 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                             referenceUrl: _referenceUrlController.text.isEmpty ? null : _referenceUrlController.text,
                           );
                           
-                          // 直接リポジトリで保存（Providerを介さない）
-                          await repository.addRecord(record);
+                          try {
+                            // Providerを使用して保存 - mounted チェック前に結果受け取り
+                            final success = await ref.read(cookingRecordsProvider.notifier).addRecord(record);
+                            debugPrint('SAVE: addRecord completed with success=$success');
                           
-                          debugPrint('SAVE: after addRecord (line A)');
-                          await Future<void>.delayed(Duration.zero);
-                          debugPrint('SAVE: before pop (line B)');
+                            // 画像フラグリセット
+                            _isNewImagePick = false;
                           
-                          // 成功フラグを設定
-                          final success = true;
+                            // mounted チェックを先に行い、安全なら pop
+                            if (!mounted) {
+                              debugPrint('SAVE: not mounted (line C) - but save was successful=$success');
+                              return; // 画面が既に破棄されている場合は何もしない
+                            }
                           
-                          // 画像フラグリセット
-                          _isNewImagePick = false;
-                          
-                          // 画面を閉じる
-                          if (!mounted) {
-                            debugPrint('SAVE: not mounted (line C)');
-                            return;
+                            // 画面が生きているなら pop
+                            debugPrint('SAVE: about to pop with success=$success');
+                            context.pop(success);
+                            debugPrint('SAVE: popped (line D)');
+                          } catch (e) {
+                            debugPrint('SAVE: addRecord error: $e');
+                            // エラー時、画面が生きてたらスナックバーを表示
+                            if (mounted) {
+                              showSnack('保存中にエラー: $e', color: Colors.red);
+                            }
+                            throw e; // 再スロー
                           }
-                          
-                          debugPrint('SAVE: about to pop');
-                          context.pop(true);
-                          debugPrint('SAVE: popped (line D)');
                           
                         } catch (e, st) {
                           debugPrint('SAVE: error=$e\n$st');

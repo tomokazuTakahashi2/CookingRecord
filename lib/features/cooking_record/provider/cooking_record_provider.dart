@@ -3,58 +3,70 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cooking_record/features/cooking_record/data/cooking_record_repository.dart';
 import 'package:cooking_record/features/cooking_record/model/cooking_record.dart';
 
-final cookingRecordsProvider = AsyncNotifierProvider<CookingRecordsNotifier, List<CookingRecord>>(() {
-  return CookingRecordsNotifier();
-});
+final cookingRecordsProvider = AsyncNotifierProvider<CookingRecordsNotifier, List<CookingRecord>>(
+  CookingRecordsNotifier.new
+);
 
 class CookingRecordsNotifier extends AsyncNotifier<List<CookingRecord>> {
-  late final CookingRecordRepository _repository;
+  // Use getter instead of field to avoid build() issues
+  CookingRecordRepository get _repo => ref.read(cookingRecordRepositoryProvider);
 
   @override
   Future<List<CookingRecord>> build() async {
-    _repository = ref.watch(cookingRecordRepositoryProvider);
-    return _repository.getRecords();
+    return _repo.getRecords();
   }
 
-  Future<void> addRecord(CookingRecord record) async {
-    // いま表示しているリストを保持（nullなら空）
-    final current = state.value ?? <CookingRecord>[];
+
+  Future<bool> addRecord(CookingRecord record) async {
+    final current = state.valueOrNull ?? <CookingRecord>[];
     
-    // UIはすぐ更新（体感速度UP）
-    state = AsyncValue.data([record, ...current]);
+    // UIはすぐ更新（体感速度UP）- AsyncData keeps existing state, doesn't trigger loading
+    state = AsyncData([record, ...current]);
     
     debugPrint('PROVIDER: Starting addRecord() - local state already updated');
     
     // DB保存（ここが失敗したら巻き戻す）
     try {
-      await _repository.addRecord(record);
+      await _repo.addRecord(record);
       debugPrint('PROVIDER: Record saved to DB successfully');
+      return true;
     } catch (e, st) {
       debugPrint('PROVIDER: Error saving record: $e');
       // エラー時は元に戻す
-      state = AsyncValue.data(current);
+      state = AsyncData(current);
       // エラーを再スロー
-      rethrow;
+      throw AsyncError(e, st);
     }
   }
 
   Future<void> deleteRecord(String id) async {
-    state = const AsyncValue.loading();
+    state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await _repository.deleteRecord(id);
-      return _repository.getRecords();
+      await _repo.deleteRecord(id);
+      return _repo.getRecords();
     });
   }
 
-  Future<void> updateRecord(CookingRecord record) async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      await _repository.updateRecord(record);
-      return _repository.getRecords();
-    });
+  Future<bool> updateRecord(CookingRecord record) async {
+    // Don't set loading state when updating - prevents router from reacting
+    try {
+      await _repo.updateRecord(record);
+      // Only update state after success
+      final records = await _repo.getRecords();
+      state = AsyncData(records);
+      return true;
+    } catch (e, st) {
+      debugPrint('PROVIDER: Error updating record: $e');
+      state = AsyncError(e, st);
+      throw AsyncError(e, st);
+    }
   }
 
   Future<List<CookingRecord>> getRecords() async {
-    return _repository.getRecords();
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      return _repo.getRecords();
+    });
+    return state.valueOrNull ?? [];
   }
 }
