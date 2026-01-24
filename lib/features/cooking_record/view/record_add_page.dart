@@ -81,11 +81,8 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
     }
   }
 
+  // This method is now only called when form is already validated
   Future<void> _saveRecord() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
     try {
       String? savedImagePath;
       if (_imagePath != null) {
@@ -100,10 +97,27 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
             debugPrint('Saved image to: $savedImagePath');
           } else {
             debugPrint('Source image not found: $_imagePath');
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('画像の保存に失敗しました'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
           }
         } catch (e) {
           debugPrint('Error saving image: $e');
-          rethrow;
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('画像の保存中にエラーが発生しました: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          return;
         }
       }
 
@@ -118,6 +132,7 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
       );
 
       await ref.read(cookingRecordsProvider.notifier).addRecord(record);
+      return;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -127,7 +142,7 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
           ),
         );
       }
-      rethrow;
+      throw e; // Rethrow so the caller knows the save failed
     }
   }
 
@@ -235,19 +250,54 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                   decoration: const InputDecoration(
                     labelText: '参考URL',
                     border: OutlineInputBorder(),
+                    hintText: 'https://example.com',
+                    helperText: '有効なウェブサイトのURLを入力してください',
                   ),
                   keyboardType: TextInputType.url,
+                  autocorrect: false,
                   validator: (value) {
-                    if (value != null && value.isNotEmpty) {
-                      try {
-                        final uri = Uri.parse(value);
-                        if (!uri.isScheme('http') && !uri.isScheme('https')) {
-                          return 'URLはhttpまたはhttpsで始まる必要があります';
-                        }
-                      } catch (e) {
-                        return '有効なURLを入力してください';
-                      }
+                    if (value == null || value.isEmpty) {
+                      return null; // URL is optional
                     }
+                    
+                    // First check if it starts with http/https
+                    if (!value.startsWith('http://') && !value.startsWith('https://')) {
+                      return 'URLはhttpまたはhttpsで始まる必要があります';
+                    }
+                    
+                    // Try to parse the URI
+                    try {
+                      final uri = Uri.parse(value);
+                      
+                      // Check if it has a valid domain
+                      if (uri.host.isEmpty || !uri.host.contains('.')) {
+                        return '有効なドメイン名が必要です (例: example.com)';
+                      }
+                      
+                      // Check if there's a valid TLD
+                      final segments = uri.host.split('.');
+                      if (segments.last.length < 2) {
+                        return '有効なドメイン名が必要です (例: .com, .jp)';
+                      }
+                      
+                      // Check for valid URL structure using regex
+                      final RegExp urlRegex = RegExp(
+                        r'^(https?:\/\/)?' // protocol
+                        r'((([a-z\d]([a-z\d-]*[a-z\d])*)\.)+[a-z]{2,}|' // domain name
+                        r'((\d{1,3}\.){3}\d{1,3}))' // OR ip (v4) address
+                        r'(\:\d+)?(\/[-a-z\d%_.~+]*)*' // port and path
+                        r'(\?[;&a-z\d%_.~+=-]*)?' // query string
+                        r'(\#[-a-z\d_]*)?$', // fragment locater
+                        caseSensitive: false,
+                      );
+                      
+                      if (!urlRegex.hasMatch(value)) {
+                        return '有効なURLの形式ではありません';
+                      }
+                    } catch (e) {
+                      return '有効なURLを入力してください';
+                    }
+                    
                     return null;
                   },
                 ),
@@ -261,9 +311,32 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                       onPressed: isLoading 
                           ? null 
                           : () async {
-                              await _saveRecord();
-                              if (mounted && context.mounted) {
-                                Navigator.of(context).pop();
+                              if (_formKey.currentState!.validate()) {
+                                try {
+                                  await _saveRecord();
+                                  if (mounted && context.mounted) {
+                                    Navigator.of(context).pop();
+                                  }
+                                } catch (e) {
+                                  debugPrint('Error saving record: $e');
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('保存中にエラーが発生しました: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
+                              } else {
+                                // Show a snackbar for invalid fields
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('入力エラーがあります。入力内容を確認してください。'),
+                                    backgroundColor: Colors.red,
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
                               }
                             },
                       child: isLoading

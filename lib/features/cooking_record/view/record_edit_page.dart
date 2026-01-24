@@ -276,6 +276,8 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                   decoration: InputDecoration(
                     labelText: '参考URL',
                     border: const OutlineInputBorder(),
+                    hintText: 'https://example.com',
+                    helperText: '有効なウェブサイトのURLを入力してください',
                     suffixIcon: _referenceUrlController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.open_in_new),
@@ -331,17 +333,50 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                         : null,
                   ),
                   keyboardType: TextInputType.url,
+                  autocorrect: false,
                   validator: (value) {
-                    if (value != null && value.isNotEmpty) {
-                      try {
-                        final uri = Uri.parse(value);
-                        if (!uri.isScheme('http') && !uri.isScheme('https')) {
-                          return 'URLはhttpまたはhttpsで始まる必要があります';
-                        }
-                      } catch (e) {
-                        return '有効なURLを入力してください';
-                      }
+                    if (value == null || value.isEmpty) {
+                      return null; // URL is optional
                     }
+                    
+                    // First check if it starts with http/https
+                    if (!value.startsWith('http://') && !value.startsWith('https://')) {
+                      return 'URLはhttpまたはhttpsで始まる必要があります';
+                    }
+                    
+                    // Try to parse the URI
+                    try {
+                      final uri = Uri.parse(value);
+                      
+                      // Check if it has a valid domain
+                      if (uri.host.isEmpty || !uri.host.contains('.')) {
+                        return '有効なドメイン名が必要です (例: example.com)';
+                      }
+                      
+                      // Check if there's a valid TLD
+                      final segments = uri.host.split('.');
+                      if (segments.last.length < 2) {
+                        return '有効なドメイン名が必要です (例: .com, .jp)';
+                      }
+                      
+                      // Check for valid URL structure using regex
+                      final RegExp urlRegex = RegExp(
+                        r'^(https?:\/\/)?' // protocol
+                        r'((([a-z\d]([a-z\d-]*[a-z\d])*)\.)+[a-z]{2,}|' // domain name
+                        r'((\d{1,3}\.){3}\d{1,3}))' // OR ip (v4) address
+                        r'(\:\d+)?(\/[-a-z\d%_.~+]*)*' // port and path
+                        r'(\?[;&a-z\d%_.~+=-]*)?' // query string
+                        r'(\#[-a-z\d_]*)?$', // fragment locater
+                        caseSensitive: false,
+                      );
+                      
+                      if (!urlRegex.hasMatch(value)) {
+                        return '有効なURLの形式ではありません';
+                      }
+                    } catch (e) {
+                      return '有効なURLを入力してください';
+                    }
+                    
                     return null;
                   },
                   onChanged: (value) {
@@ -358,11 +393,76 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                       onPressed: (isLoading || !_hasChanges)
                           ? null 
                           : () async {
-                              Navigator.of(context).pop(true);
+                              // Validate form first
+                              if (!_formKey.currentState!.validate()) {
+                                // Show a snackbar for invalid fields
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('入力エラーがあります。入力内容を確認してください。'),
+                                    backgroundColor: Colors.red,
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                                return;
+                              }
+                              
+                              // If form is valid, save and navigate back
                               try {
-                                await _saveRecord();
+                                // Create an updated record
+                                String? savedImagePath;
+                                if (_imagePath != null) {
+                                  try {
+                                    final sourceFile = File(_imagePath!);
+                                    if (await sourceFile.exists()) {
+                                      final appDir = await getApplicationDocumentsDirectory();
+                                      final fileName = '${const Uuid().v4()}.jpg';
+                                      final savedImage = File('${appDir.path}/$fileName');
+                                      await sourceFile.copy(savedImage.path);
+                                      savedImagePath = savedImage.path;
+                                      debugPrint('Saved image to: $savedImagePath');
+                                    } else {
+                                      debugPrint('Source image not found: $_imagePath');
+                                    }
+                                  } catch (e) {
+                                    debugPrint('Error saving image: $e');
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('画像の保存中にエラーが発生しました: $e'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                    return;
+                                  }
+                                }
+
+                                final updatedRecord = CookingRecord(
+                                  id: widget.record.id,
+                                  dishName: _dishNameController.text,
+                                  memo: _memoController.text.isEmpty ? null : _memoController.text,
+                                  createdAt: widget.record.createdAt,
+                                  photoPath: savedImagePath ?? _imagePath,
+                                  rating: _rating,
+                                  referenceUrl: _referenceUrlController.text.isEmpty ? null : _referenceUrlController.text,
+                                );
+
+                                await ref.read(cookingRecordsProvider.notifier).updateRecord(updatedRecord);
+                                
+                                // After successful save, navigate back to the previous screen
+                                if (mounted && context.mounted) {
+                                  Navigator.of(context).pop(true);
+                                }
                               } catch (e) {
                                 debugPrint('Error saving record: $e');
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('保存中にエラーが発生しました: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
                               }
                             },
                       child: isLoading
