@@ -8,7 +8,11 @@ import 'package:cooking_record/features/cooking_record/view/privacy_policy_page.
 import 'package:cooking_record/features/cooking_record/provider/cooking_record_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+// Root navigator key for consistent navigation
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final router = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   routes: [
     GoRoute(
@@ -17,6 +21,7 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/add',
+      parentNavigatorKey: rootNavigatorKey, // 確実にルートNavigatorに積むための設定
       builder: (context, state) => const RecordAddPage(),
     ),
     GoRoute(
@@ -48,6 +53,7 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/edit/:id',
+      parentNavigatorKey: rootNavigatorKey, // 確実にルートNavigatorに積むための設定
       builder: (context, state) {
         final id = state.pathParameters['id']!;
         return Consumer(

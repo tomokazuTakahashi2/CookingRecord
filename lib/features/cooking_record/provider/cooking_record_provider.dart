@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cooking_record/features/cooking_record/data/cooking_record_repository.dart';
 import 'package:cooking_record/features/cooking_record/model/cooking_record.dart';
@@ -16,11 +17,25 @@ class CookingRecordsNotifier extends AsyncNotifier<List<CookingRecord>> {
   }
 
   Future<void> addRecord(CookingRecord record) async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
+    // いま表示しているリストを保持（nullなら空）
+    final current = state.value ?? <CookingRecord>[];
+    
+    // UIはすぐ更新（体感速度UP）
+    state = AsyncValue.data([record, ...current]);
+    
+    debugPrint('PROVIDER: Starting addRecord() - local state already updated');
+    
+    // DB保存（ここが失敗したら巻き戻す）
+    try {
       await _repository.addRecord(record);
-      return _repository.getRecords();
-    });
+      debugPrint('PROVIDER: Record saved to DB successfully');
+    } catch (e, st) {
+      debugPrint('PROVIDER: Error saving record: $e');
+      // エラー時は元に戻す
+      state = AsyncValue.data(current);
+      // エラーを再スロー
+      rethrow;
+    }
   }
 
   Future<void> deleteRecord(String id) async {

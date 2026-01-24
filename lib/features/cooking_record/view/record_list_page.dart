@@ -8,6 +8,7 @@ import 'package:cooking_record/features/cooking_record/model/cooking_record.dart
 import 'package:cooking_record/features/cooking_record/widget/placeholder_image.dart';
 import 'package:cooking_record/features/cooking_record/widget/header_app_bar.dart';
 import 'package:cooking_record/features/cooking_record/widget/rating_stars.dart';
+import 'package:cooking_record/app/utils.dart';
 
 class RecordListPage extends ConsumerWidget {
   const RecordListPage({super.key});
@@ -71,22 +72,9 @@ class RecordListPage extends ConsumerWidget {
                         }
                         // レコードの削除
                         await ref.read(cookingRecordsProvider.notifier).deleteRecord(record.id);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('記録を削除しました'),
-                            ),
-                          );
-                        }
+                        showSnack('記録を削除しました');
                       } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('削除中にエラーが発生しました: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
+                        showSnack('削除中にエラーが発生しました: $e', color: Colors.red);
                       }
                     },
                     child: RecordListTile(record: record),
@@ -103,9 +91,17 @@ class RecordListPage extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
+        onPressed: () async {
           debugPrint('FAB tapped, navigating to add page');
-          context.push('/add');
+          final result = await context.push<bool>('/add');
+          debugPrint('Returned from add page with result: $result');
+          
+          // 保存成功の場合はメッセージを表示し、リストを更新
+          if (result == true) {
+            // データを更新（キャッシュをクリアして再取得）
+            ref.invalidate(cookingRecordsProvider);
+            showSnack('記録を保存しました', color: Colors.green);
+          }
         },
         child: const Icon(Icons.add),
       ),

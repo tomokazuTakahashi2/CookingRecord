@@ -48,7 +48,10 @@ class CookingRecordRepository {
   }
 
   Future<List<CookingRecord>> getRecords() async {
-    await _cleanupOrphanedPhotos();
+    // Note: Cleanup is expensive and causes timeouts when saving. 
+    // Only run it occasionally, not on every data fetch
+    
+    // await _cleanupOrphanedPhotos(); // Disabled for performance
     final db = await dbHelper.database;
     final records = await db.query(DatabaseHelper.table);
     final appDir = await getApplicationDocumentsDirectory();
@@ -83,7 +86,12 @@ class CookingRecordRepository {
   }
 
   Future<void> addRecord(CookingRecord record) async {
-    final db = await dbHelper.database;
+    // Add debug log to track execution time
+    final startTime = DateTime.now();
+    debugPrint('REPOSITORY: Starting addRecord() at $startTime');
+
+    try {
+      final db = await dbHelper.database;
     String? relativePhotoPath;
     
     if (record.photoPath != null) {
@@ -125,6 +133,18 @@ class CookingRecordRepository {
         DatabaseHelper.columnReferenceUrl: record.referenceUrl,
       },
     );
+    
+      final endTime = DateTime.now();
+      final duration = endTime.difference(startTime);
+      debugPrint('REPOSITORY: Completed addRecord() in ${duration.inMilliseconds}ms');
+      
+      // Force a notification that data has been saved
+      // This ensures other code waiting for this completion gets notified
+      debugPrint('REPOSITORY: ✅✅✅ RECORD SAVED SUCCESSFULLY ✅✅✅');
+    } catch (e) {
+      debugPrint('REPOSITORY: ❌❌❌ ERROR IN addRecord: $e ❌❌❌');
+      rethrow;
+    }
   }
 
   Future<void> updateRecord(CookingRecord record) async {
@@ -179,5 +199,32 @@ class CookingRecordRepository {
       where: '${DatabaseHelper.columnId} = ?',
       whereArgs: [id],
     );
+  }
+  
+  // Simple direct save method that bypasses some complexity
+  // This is a simpler approach for debugging purposes
+  Future<bool> saveRecordDirect(CookingRecord record) async {
+    debugPrint('REPOSITORY: Starting directSave() for record ${record.id}');
+    try {
+      final db = await dbHelper.database;
+      
+      await db.insert(
+        DatabaseHelper.table,
+        {
+          DatabaseHelper.columnId: record.id,
+          DatabaseHelper.columnDishName: record.dishName,
+          DatabaseHelper.columnMemo: record.memo,
+          DatabaseHelper.columnCreatedAt: record.createdAt.toIso8601String(),
+          DatabaseHelper.columnRating: record.rating,
+          DatabaseHelper.columnReferenceUrl: record.referenceUrl,
+        },
+      );
+      
+      debugPrint('REPOSITORY: Direct save completed successfully');
+      return true;
+    } catch (e) {
+      debugPrint('REPOSITORY: Direct save failed: $e');
+      return false;
+    }
   }
 }

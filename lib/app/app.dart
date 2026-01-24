@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cooking_record/app/router.dart';
+import 'package:cooking_record/app/utils.dart';
 
 class CookingRecordApp extends StatelessWidget {
   const CookingRecordApp({super.key});
@@ -9,6 +10,7 @@ class CookingRecordApp extends StatelessWidget {
     debugPrint('Building CookingRecordApp');
     return MaterialApp.router(
       title: '自炊記録',
+      scaffoldMessengerKey: messengerKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,

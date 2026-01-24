@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
@@ -7,9 +8,12 @@ import 'package:uuid/uuid.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cooking_record/features/cooking_record/model/cooking_record.dart';
 import 'package:cooking_record/features/cooking_record/provider/cooking_record_provider.dart';
+import 'package:cooking_record/features/cooking_record/data/cooking_record_repository.dart';
 import 'package:cooking_record/features/cooking_record/widget/placeholder_image.dart';
 import 'package:cooking_record/features/cooking_record/widget/header_app_bar.dart';
 import 'package:cooking_record/features/cooking_record/widget/rating_stars.dart';
+import 'package:go_router/go_router.dart';
+import 'package:cooking_record/app/utils.dart';
 
 class RecordEditPage extends ConsumerStatefulWidget {
   const RecordEditPage({
@@ -31,6 +35,8 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
   String? _imagePath;
   late int _rating;
   bool _isEdited = false;
+  bool _isSaving = false; // 保存中の状態を管理
+  bool _isNewImagePick = false; // 新たに選択した画像かどうか
 
   void _onTextChanged() {
     setState(() {
@@ -46,6 +52,57 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
         _imagePath != widget.record.photoPath ||
         _rating != widget.record.rating;
   }
+  
+  // URLバリデーション関数を共通化
+  String? _validateUrl(String? value) {
+    if (value == null || value.isEmpty) return null;
+
+    if (!value.startsWith('https://')) {
+      return 'URLはhttps://で始まる必要があります（安全な接続）';
+    }
+
+    Uri? uri;
+    try {
+      uri = Uri.parse(value);
+    } catch (_) {
+      return '有効なURLを入力してください';
+    }
+
+    if (uri.host.isEmpty || !uri.host.contains('.')) {
+      return '有効なドメイン名が必要です (例: example.com)';
+    }
+
+    final segments = uri.host.split('.');
+    if (segments.last.length < 2) {
+      return '有効なドメイン名が必要です (例: .com, .jp)';
+    }
+
+    // ホストに日本語などが混ざったら弾く（.comあ を確実に弾く）
+    final hostOk = RegExp(r'^[A-Za-z0-9.-]+$').hasMatch(uri.host);
+    final punycodeOk = uri.host.startsWith('xn--'); // 国際化ドメイン許可
+    if (!hostOk && !punycodeOk) {
+      return 'ドメイン名に使用できない文字が含まれています';
+    }
+
+    // 正規表現でさらに厳密に検証
+    final urlRegex = RegExp(
+      r'^(https:\/\/)'
+      r'((([a-z\d]([a-z\d-]*[a-z\d])*)\.)+[a-z]{2,}|'
+      r'((\d{1,3}\.){3}\d{1,3}))'
+      r'(\:\d+)?(\/[-a-z\d%_.~+]*)*'
+      r'(\?[;&a-z\d%_.~+=-]*)?'
+      r'(\#[-a-z\d_]*)?$',
+      caseSensitive: false,
+    );
+    if (!urlRegex.hasMatch(value)) {
+      return '有効なURLの形式ではありません';
+    }
+
+    return null;
+  }
+
+  // 共通のバリデーション関数を使用
+  bool _hasValidUrl() => _validateUrl(_referenceUrlController.text) == null;
 
   @override
   void initState() {
@@ -105,16 +162,10 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
           setState(() {
             _imagePath = file.path;
             _isEdited = true;
+            _isNewImagePick = true; // 画像選択フラグをON
           });
         } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('画像の読み込みに失敗しました'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+          showSnack('画像の読み込みに失敗しました', color: Colors.red);
         }
       }
     }
@@ -176,9 +227,18 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
       appBar: const HeaderAppBar(title: '記録を編集'),
       body: SafeArea(
         child: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
+          onTap: () async {
+            // キーボードを閉じる前に確実に入力を確定させる
+            final currentFocus = FocusScope.of(context);
+            if (!currentFocus.hasPrimaryFocus) {
+              // テキスト確定のために少し待機
+              await Future<void>.delayed(Duration.zero);
+            }
+            currentFocus.unfocus();
+          },
           child: Form(
             key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
@@ -278,7 +338,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                     border: const OutlineInputBorder(),
                     hintText: 'https://example.com',
                     helperText: '有効なウェブサイトのURLを入力してください',
-                    suffixIcon: _referenceUrlController.text.isNotEmpty
+                    suffixIcon: (_referenceUrlController.text.isNotEmpty && _hasValidUrl())
                         ? IconButton(
                             icon: const Icon(Icons.open_in_new),
                                   onPressed: () async {
@@ -301,31 +361,14 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                                             );
                                           }
                                           
-                                          if (!launched && mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text('URLを開けませんでした'),
-                                                backgroundColor: Colors.red,
-                                              ),
-                                            );
+                                          if (!launched) {
+                                            showSnack('URLを開けませんでした', color: Colors.red);
                                           }
-                                        } else if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('このURLを処理できるアプリが見つかりません'),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
+                                        } else {
+                                          showSnack('このURLを処理できるアプリが見つかりません', color: Colors.red);
                                         }
                                       } catch (e) {
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text('URLの処理中にエラーが発生しました: $e'),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
-                                        }
+                                        showSnack('URLの処理中にエラーが発生しました: $e', color: Colors.red);
                                       }
                                     }
                             },
@@ -334,51 +377,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                   ),
                   keyboardType: TextInputType.url,
                   autocorrect: false,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return null; // URL is optional
-                    }
-                    
-                    // Only allow HTTPS URLs for security
-                    if (!value.startsWith('https://')) {
-                      return 'URLはhttpsで始まる必要があります（安全な接続）';
-                    }
-                    
-                    // Try to parse the URI
-                    try {
-                      final uri = Uri.parse(value);
-                      
-                      // Check if it has a valid domain
-                      if (uri.host.isEmpty || !uri.host.contains('.')) {
-                        return '有効なドメイン名が必要です (例: example.com)';
-                      }
-                      
-                      // Check if there's a valid TLD
-                      final segments = uri.host.split('.');
-                      if (segments.last.length < 2) {
-                        return '有効なドメイン名が必要です (例: .com, .jp)';
-                      }
-                      
-                      // Check for valid URL structure using regex
-                      final RegExp urlRegex = RegExp(
-                        r'^(https?:\/\/)?' // protocol
-                        r'((([a-z\d]([a-z\d-]*[a-z\d])*)\.)+[a-z]{2,}|' // domain name
-                        r'((\d{1,3}\.){3}\d{1,3}))' // OR ip (v4) address
-                        r'(\:\d+)?(\/[-a-z\d%_.~+]*)*' // port and path
-                        r'(\?[;&a-z\d%_.~+=-]*)?' // query string
-                        r'(\#[-a-z\d_]*)?$', // fragment locater
-                        caseSensitive: false,
-                      );
-                      
-                      if (!urlRegex.hasMatch(value)) {
-                        return '有効なURLの形式ではありません';
-                      }
-                    } catch (e) {
-                      return '有効なURLを入力してください';
-                    }
-                    
-                    return null;
-                  },
+                  validator: _validateUrl,
                   onChanged: (value) {
                     setState(() {});
                   },
@@ -389,29 +388,39 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                     final recordsAsync = ref.watch(cookingRecordsProvider);
                     final isLoading = recordsAsync.isLoading;
 
+                    // 有効条件: 保存中でなく && 変更あり && 料理名が入力済み && URL検証に合格
+                    final canSave = !_isSaving && !isLoading && _hasChanges && _dishNameController.text.trim().isNotEmpty && _hasValidUrl();
+                    
                     return FilledButton(
-                      onPressed: (isLoading || !_hasChanges)
-                          ? null 
-                          : () async {
-                              // Validate form first
-                              if (!_formKey.currentState!.validate()) {
-                                // Show a snackbar for invalid fields
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('入力エラーがあります。入力内容を確認してください。'),
-                                    backgroundColor: Colors.red,
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                                return;
-                              }
+                      onPressed: canSave
+                          ? () async {
+                              // 多重実行防止ガード
+                              if (_isSaving) return;
                               
-                              // If form is valid, save and navigate back
+                              debugPrint('SAVE: ボタン押下');
+                              
+                              // 即座にボタンを無効化（多重タップ防止）
+                              setState(() => _isSaving = true);
+                              
                               try {
+                                // キーボードを閉じる
+                                FocusManager.instance.primaryFocus?.unfocus();
+                                await Future<void>.delayed(Duration.zero);
+                                
+                                final ok = _formKey.currentState!.validate();
+                                debugPrint('SAVE: validate=$ok');
+                                if (!ok) return;
+                                
+                                // 保存中メッセージ表示
+                                showSnack('保存中...', color: Colors.orange, seconds: 1);
+                                
                                 // Create an updated record
+                                debugPrint('SAVE: start');
                                 String? savedImagePath;
-                                if (_imagePath != null) {
+                                if (_imagePath != null && _isNewImagePick) {
+                                  // 新しく選択した画像のみコピーする
                                   try {
+                                    debugPrint('SAVE: copying new image');
                                     final sourceFile = File(_imagePath!);
                                     if (await sourceFile.exists()) {
                                       final appDir = await getApplicationDocumentsDirectory();
@@ -419,21 +428,14 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                                       final savedImage = File('${appDir.path}/$fileName');
                                       await sourceFile.copy(savedImage.path);
                                       savedImagePath = savedImage.path;
-                                      debugPrint('Saved image to: $savedImagePath');
+                                      debugPrint('SAVE: image copied to: $savedImagePath');
                                     } else {
-                                      debugPrint('Source image not found: $_imagePath');
+                                      debugPrint('SAVE: source image not found: $_imagePath');
+                                      throw Exception('画像ファイルが見つかりません');
                                     }
                                   } catch (e) {
                                     debugPrint('Error saving image: $e');
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('画像の保存中にエラーが発生しました: $e'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    }
-                                    return;
+                                    throw Exception('画像の保存中にエラー: $e');
                                   }
                                 }
 
@@ -442,30 +444,44 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                                   dishName: _dishNameController.text,
                                   memo: _memoController.text.isEmpty ? null : _memoController.text,
                                   createdAt: widget.record.createdAt,
-                                  photoPath: savedImagePath ?? _imagePath,
+                                  // 新規選択画像ならsavedImagePath、選択してないなら元の画像パスを使用
+                                  photoPath: savedImagePath ?? (_isNewImagePick ? _imagePath : widget.record.photoPath),
                                   rating: _rating,
                                   referenceUrl: _referenceUrlController.text.isEmpty ? null : _referenceUrlController.text,
                                 );
 
-                                await ref.read(cookingRecordsProvider.notifier).updateRecord(updatedRecord);
+                                debugPrint('SAVE: before updateRecord');
                                 
-                                // After successful save, navigate back to the previous screen
-                                if (mounted && context.mounted) {
-                                  Navigator.of(context).pop(true);
+                                // 直接リポジトリで保存（Providerを介さない）
+                                final repository = ref.read(cookingRecordRepositoryProvider);
+                                await repository.updateRecord(updatedRecord);
+                                
+                                debugPrint('SAVE: after updateRecord (line A)');
+                                await Future<void>.delayed(Duration.zero);
+                                debugPrint('SAVE: before pop (line B)');
+                                
+                                // 画面を閉じる
+                                if (!mounted) {
+                                  debugPrint('SAVE: not mounted (line C)');
+                                  return;
                                 }
-                              } catch (e) {
-                                debugPrint('Error saving record: $e');
+                                
+                                debugPrint('SAVE: about to pop');
+                                context.pop(true);
+                                debugPrint('SAVE: popped (line D)');
+                                
+                              } catch (e, st) {
+                                debugPrint('SAVE: error=$e\n$st');
                                 if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('保存中にエラーが発生しました: $e'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
+                                  showSnack('保存中にエラー: $e', color: Colors.red);
                                 }
+                              } finally {
+                                // 必ず保存状態を元に戻す
+                                if (mounted) setState(() => _isSaving = false);
                               }
-                            },
-                      child: isLoading
+                            }
+                          : null,
+                      child: _isSaving || isLoading
                           ? const SizedBox(
                               width: 24,
                               height: 24,
