@@ -1,4 +1,4 @@
-package com.example.cooking_record
+package com.takahashi.cooking_record
 
 import io.flutter.embedding.android.FlutterActivity
 
