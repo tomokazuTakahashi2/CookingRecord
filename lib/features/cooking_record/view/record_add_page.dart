@@ -260,9 +260,9 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                       return null; // URL is optional
                     }
                     
-                    // First check if it starts with http/https
-                    if (!value.startsWith('http://') && !value.startsWith('https://')) {
-                      return 'URLはhttpまたはhttpsで始まる必要があります';
+                    // Only allow HTTPS URLs for security
+                    if (!value.startsWith('https://')) {
+                      return 'URLはhttpsで始まる必要があります（安全な接続）';
                     }
                     
                     // Try to parse the URI

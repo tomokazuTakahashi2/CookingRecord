@@ -283,7 +283,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                             icon: const Icon(Icons.open_in_new),
                                   onPressed: () async {
                                     final url = _referenceUrlController.text;
-                                    if (url.startsWith('http://') || url.startsWith('https://')) {
+                                    if (url.startsWith('https://')) {
                                       try {
                                         final uri = Uri.parse(url);
                                         if (await url_launcher.canLaunchUrl(uri)) {
@@ -339,9 +339,9 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                       return null; // URL is optional
                     }
                     
-                    // First check if it starts with http/https
-                    if (!value.startsWith('http://') && !value.startsWith('https://')) {
-                      return 'URLはhttpまたはhttpsで始まる必要があります';
+                    // Only allow HTTPS URLs for security
+                    if (!value.startsWith('https://')) {
+                      return 'URLはhttpsで始まる必要があります（安全な接続）';
                     }
                     
                     // Try to parse the URI
