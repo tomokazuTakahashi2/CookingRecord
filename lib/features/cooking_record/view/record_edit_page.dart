@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart' as url_launcher;
 import 'package:uuid/uuid.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cooking_record/features/cooking_record/model/cooking_record.dart';
@@ -29,19 +30,41 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
   late final TextEditingController _referenceUrlController;
   String? _imagePath;
   late int _rating;
+  bool _isEdited = false;
+
+  void _onTextChanged() {
+    setState(() {
+      _isEdited = true;
+    });
+  }
+
+  bool get _hasChanges {
+    return _isEdited ||
+        _dishNameController.text != widget.record.dishName ||
+        _memoController.text != (widget.record.memo ?? '') ||
+        _referenceUrlController.text != (widget.record.referenceUrl ?? '') ||
+        _imagePath != widget.record.photoPath ||
+        _rating != widget.record.rating;
+  }
 
   @override
   void initState() {
     super.initState();
-    _dishNameController = TextEditingController(text: widget.record.dishName);
-    _memoController = TextEditingController(text: widget.record.memo ?? '');
-    _referenceUrlController = TextEditingController(text: widget.record.referenceUrl ?? '');
+    _dishNameController = TextEditingController(text: widget.record.dishName)
+      ..addListener(_onTextChanged);
+    _memoController = TextEditingController(text: widget.record.memo ?? '')
+      ..addListener(_onTextChanged);
+    _referenceUrlController = TextEditingController(text: widget.record.referenceUrl ?? '')
+      ..addListener(_onTextChanged);
     _imagePath = widget.record.photoPath;
     _rating = widget.record.rating;
   }
 
   @override
   void dispose() {
+    _dishNameController.removeListener(_onTextChanged);
+    _memoController.removeListener(_onTextChanged);
+    _referenceUrlController.removeListener(_onTextChanged);
     _dishNameController.dispose();
     _memoController.dispose();
     _referenceUrlController.dispose();
@@ -81,6 +104,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
         if (await file.exists()) {
           setState(() {
             _imagePath = file.path;
+            _isEdited = true;
           });
         } else {
           if (mounted) {
@@ -229,6 +253,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                         onRatingChanged: (value) {
                           setState(() {
                             _rating = value;
+                            _isEdited = true;
                           });
                         },
                       ),
@@ -248,9 +273,62 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _referenceUrlController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: '参考URL',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: _referenceUrlController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.open_in_new),
+                                  onPressed: () async {
+                                    final url = _referenceUrlController.text;
+                                    if (url.startsWith('http://') || url.startsWith('https://')) {
+                                      try {
+                                        final uri = Uri.parse(url);
+                                        if (await url_launcher.canLaunchUrl(uri)) {
+                                          // First try external application mode
+                                          bool launched = await url_launcher.launchUrl(
+                                            uri,
+                                            mode: url_launcher.LaunchMode.externalApplication,
+                                          );
+                                          
+                                          // If that fails, try platform default as fallback
+                                          if (!launched) {
+                                            launched = await url_launcher.launchUrl(
+                                              uri,
+                                              mode: url_launcher.LaunchMode.platformDefault,
+                                            );
+                                          }
+                                          
+                                          if (!launched && mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('URLを開けませんでした'),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        } else if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('このURLを処理できるアプリが見つかりません'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('URLの処理中にエラーが発生しました: $e'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    }
+                            },
+                          )
+                        : null,
                   ),
                   keyboardType: TextInputType.url,
                   validator: (value) {
@@ -266,6 +344,9 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                     }
                     return null;
                   },
+                  onChanged: (value) {
+                    setState(() {});
+                  },
                 ),
                 const SizedBox(height: 32),
                 Consumer(
@@ -274,12 +355,14 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                     final isLoading = recordsAsync.isLoading;
 
                     return FilledButton(
-                      onPressed: isLoading 
+                      onPressed: (isLoading || !_hasChanges)
                           ? null 
                           : () async {
-                              await _saveRecord();
-                              if (mounted && context.mounted) {
-                                Navigator.of(context).pop();
+                              Navigator.of(context).pop(true);
+                              try {
+                                await _saveRecord();
+                              } catch (e) {
+                                debugPrint('Error saving record: $e');
                               }
                             },
                       child: isLoading
