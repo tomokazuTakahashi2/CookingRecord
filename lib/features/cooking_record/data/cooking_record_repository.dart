@@ -53,7 +53,10 @@ class CookingRecordRepository {
     
     // await _cleanupOrphanedPhotos(); // Disabled for performance
     final db = await dbHelper.database;
-    final records = await db.query(DatabaseHelper.table);
+    final records = await db.query(
+      DatabaseHelper.table,
+      orderBy: '${DatabaseHelper.columnCreatedAt} DESC',
+    );
     final appDir = await getApplicationDocumentsDirectory();
 
     return records.map((record) {
