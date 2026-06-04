@@ -13,45 +13,7 @@ final cookingRecordRepositoryProvider = Provider<CookingRecordRepository>(
 class CookingRecordRepository {
   final dbHelper = DatabaseHelper.instance;
 
-  Future<void> _cleanupOrphanedPhotos() async {
-    final db = await dbHelper.database;
-    final records = await db.query(DatabaseHelper.table);
-    final validPhotoNames = records
-        .map((r) => r[DatabaseHelper.columnPhotoPath] as String?)
-        .where((path) => path != null)
-        .toSet();
-
-    final appDir = await getApplicationDocumentsDirectory();
-    final files = appDir.listSync();
-    for (final file in files) {
-      if (file is File && file.path.endsWith('.jpg')) {
-        final fileName = file.path.split('/').last;
-        if (!validPhotoNames.contains(fileName)) {
-          try {
-            file.deleteSync();
-            debugPrint('Deleted orphaned photo: ${file.path}');
-          } catch (e) {
-            debugPrint('Failed to delete orphaned photo: ${file.path}, error: $e');
-          }
-        }
-      }
-    }
-  }
-
-  Future<void> _resetDatabase() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final dbFile = File('${appDir.path}/cooking_record.db');
-    if (await dbFile.exists()) {
-      await dbFile.delete();
-      debugPrint('Database reset completed');
-    }
-  }
-
   Future<List<CookingRecord>> getRecords() async {
-    // Note: Cleanup is expensive and causes timeouts when saving. 
-    // Only run it occasionally, not on every data fetch
-    
-    // await _cleanupOrphanedPhotos(); // Disabled for performance
     final db = await dbHelper.database;
     final records = await db.query(
       DatabaseHelper.table,

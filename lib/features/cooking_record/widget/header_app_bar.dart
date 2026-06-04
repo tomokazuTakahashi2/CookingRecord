@@ -26,7 +26,7 @@ class HeaderAppBar extends StatelessWidget implements PreferredSizeWidget {
             fit: BoxFit.cover,
             alignment: Alignment.bottomCenter,
             colorFilter: ColorFilter.mode(
-              Colors.white.withOpacity(0.5),
+              Colors.white.withValues(alpha: 0.5),
               BlendMode.dstATop,
             ),
           ),

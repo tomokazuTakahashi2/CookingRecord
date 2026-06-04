@@ -33,7 +33,7 @@ class RecordDetailPage extends StatelessWidget {
 ${record.memo != null && record.memo!.isNotEmpty ? '\nメモ:\n${record.memo}' : ''}
 ${record.referenceUrl != null && record.referenceUrl!.isNotEmpty ? '\n参考URL:\n${record.referenceUrl}' : ''}
 ''';
-              Share.share(text);
+              SharePlus.instance.share(ShareParams(text: text));
             },
           ),
           IconButton(

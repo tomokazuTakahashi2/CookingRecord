@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
@@ -8,7 +7,6 @@ import 'package:uuid/uuid.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cooking_record/features/cooking_record/model/cooking_record.dart';
 import 'package:cooking_record/features/cooking_record/provider/cooking_record_provider.dart';
-import 'package:cooking_record/features/cooking_record/data/cooking_record_repository.dart';
 import 'package:cooking_record/features/cooking_record/widget/placeholder_image.dart';
 import 'package:cooking_record/features/cooking_record/widget/header_app_bar.dart';
 import 'package:cooking_record/features/cooking_record/widget/rating_stars.dart';
@@ -168,56 +166,6 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
           showSnack('画像の読み込みに失敗しました', color: Colors.red);
         }
       }
-    }
-  }
-
-  Future<void> _saveRecord() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    try {
-      String? savedImagePath;
-      if (_imagePath != null) {
-        try {
-          final sourceFile = File(_imagePath!);
-          if (await sourceFile.exists()) {
-            final appDir = await getApplicationDocumentsDirectory();
-            final fileName = '${const Uuid().v4()}.jpg';
-            final savedImage = File('${appDir.path}/$fileName');
-            await sourceFile.copy(savedImage.path);
-            savedImagePath = savedImage.path;
-            debugPrint('Saved image to: $savedImagePath');
-          } else {
-            debugPrint('Source image not found: $_imagePath');
-          }
-        } catch (e) {
-          debugPrint('Error saving image: $e');
-          rethrow;
-        }
-      }
-
-      final updatedRecord = CookingRecord(
-        id: widget.record.id,
-        dishName: _dishNameController.text,
-        memo: _memoController.text.isEmpty ? null : _memoController.text,
-        createdAt: widget.record.createdAt,
-        photoPath: savedImagePath ?? _imagePath,
-        rating: _rating,
-        referenceUrl: _referenceUrlController.text.isEmpty ? null : _referenceUrlController.text,
-      );
-
-      await ref.read(cookingRecordsProvider.notifier).updateRecord(updatedRecord);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('保存中にエラーが発生しました: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      rethrow;
     }
   }
 
@@ -458,7 +406,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                                   debugPrint('SAVE: updateRecord completed with success=$success');
                                 
                                   // mounted チェックを先に行い、安全なら pop
-                                  if (!mounted) {
+                                  if (!context.mounted) {
                                     debugPrint('SAVE: not mounted (line C) - but save was successful=$success');
                                     return; // 画面が既に破棄されている場合は何もしない
                                   }
@@ -473,7 +421,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                                   if (mounted) {
                                     showSnack('保存中にエラー: $e', color: Colors.red);
                                   }
-                                  throw e; // 再スロー
+                                  rethrow; // 再スロー
                                 }
                                 
                               } catch (e, st) {

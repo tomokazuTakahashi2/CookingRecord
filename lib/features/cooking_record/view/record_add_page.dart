@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart' as url_launcher;
@@ -9,7 +8,6 @@ import 'package:uuid/uuid.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cooking_record/features/cooking_record/model/cooking_record.dart';
 import 'package:cooking_record/features/cooking_record/provider/cooking_record_provider.dart';
-import 'package:cooking_record/features/cooking_record/data/cooking_record_repository.dart';
 import 'package:cooking_record/app/utils.dart';
 import 'package:cooking_record/features/cooking_record/widget/placeholder_image.dart';
 import 'package:cooking_record/features/cooking_record/widget/header_app_bar.dart';
@@ -146,54 +144,6 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
           showSnack('画像の読み込みに失敗しました', color: Colors.red);
         }
       }
-    }
-  }
-
-  // This method is now only called when form is already validated
-  Future<bool> _saveRecord() async {
-    try {
-      String? savedImagePath;
-      if (_imagePath != null && _isNewImagePick) {
-        try {
-          final sourceFile = File(_imagePath!);
-          if (await sourceFile.exists()) {
-            final appDir = await getApplicationDocumentsDirectory();
-            final fileName = '${const Uuid().v4()}.jpg';
-            final savedImage = File('${appDir.path}/$fileName');
-            await sourceFile.copy(savedImage.path);
-            savedImagePath = savedImage.path;
-            debugPrint('SAVE: image copied to: $savedImagePath');
-          } else {
-            debugPrint('SAVE: source image not found: $_imagePath');
-            showSnack('画像の保存に失敗しました', color: Colors.red);
-            throw Exception('画像の保存に失敗しました');
-          }
-        } catch (e) {
-          debugPrint('Error saving image: $e');
-          showSnack('画像の保存中にエラーが発生しました: $e', color: Colors.red);
-          throw Exception('画像の保存中にエラーが発生しました: $e');
-        }
-      }
-
-      final record = CookingRecord(
-        id: const Uuid().v4(),
-        dishName: _dishNameController.text,
-        memo: _memoController.text.isEmpty ? null : _memoController.text,
-        createdAt: DateTime.now(),
-        photoPath: savedImagePath,
-        rating: _rating,
-        referenceUrl: _referenceUrlController.text.isEmpty ? null : _referenceUrlController.text,
-      );
-
-      // Use provider for saving
-      debugPrint('SAVE: Using provider to save record');
-      await ref.read(cookingRecordsProvider.notifier).addRecord(record);
-      debugPrint('SAVE: Provider save completed successfully');
-      return true; // Success
-    } catch (e) {
-      showSnack('保存中にエラーが発生しました: $e', color: Colors.red);
-      debugPrint('SAVE: Error in _saveRecord: $e');
-      return false; // Failure
     }
   }
 
@@ -389,7 +339,7 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                               }
                             } catch (e) {
                               debugPrint('SAVE: 画像保存エラー: $e');
-                              throw e;
+                              rethrow;
                             }
                           }
                           
@@ -412,7 +362,7 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                             _isNewImagePick = false;
                           
                             // mounted チェックを先に行い、安全なら pop
-                            if (!mounted) {
+                            if (!context.mounted) {
                               debugPrint('SAVE: not mounted (line C) - but save was successful=$success');
                               return; // 画面が既に破棄されている場合は何もしない
                             }
@@ -427,7 +377,7 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                             if (mounted) {
                               showSnack('保存中にエラー: $e', color: Colors.red);
                             }
-                            throw e; // 再スロー
+                            rethrow; // 再スロー
                           }
                           
                         } catch (e, st) {
