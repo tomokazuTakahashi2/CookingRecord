@@ -7,20 +7,90 @@ import 'package:cooking_record/features/cooking_record/model/cooking_record.dart
 import 'package:cooking_record/features/cooking_record/widget/placeholder_image.dart';
 import 'package:cooking_record/features/cooking_record/widget/header_app_bar.dart';
 import 'package:cooking_record/features/cooking_record/widget/rating_stars.dart';
+import 'package:cooking_record/features/cooking_record/widget/tag_selector.dart';
 import 'package:cooking_record/app/utils.dart';
 
 class RecordListPage extends ConsumerWidget {
   const RecordListPage({super.key});
 
+  Future<void> _openFilterSheet(BuildContext context, WidgetRef ref) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.6,
+          maxChildSize: 0.9,
+          minChildSize: 0.4,
+          builder: (context, scrollController) {
+            return Consumer(
+              builder: (context, ref, _) {
+                final selected = ref.watch(filterTagsProvider);
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: Row(
+                        children: [
+                          const Text(
+                            'タグで絞り込み',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (selected.isNotEmpty)
+                            TextButton(
+                              onPressed: () =>
+                                  ref.read(filterTagsProvider.notifier).state = [],
+                              child: const Text('クリア'),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(16),
+                        child: TagSelector(
+                          selectedTags: selected,
+                          onChanged: (tags) =>
+                              ref.read(filterTagsProvider.notifier).state = tags,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     debugPrint('Building RecordListPage');
-    final recordsAsync = ref.watch(cookingRecordsProvider);
+    final recordsAsync = ref.watch(filteredRecordsProvider);
+    final filterTags = ref.watch(filterTagsProvider);
 
     return Scaffold(
       appBar: HeaderAppBar(
         title: '自炊記録',
         actions: [
+          IconButton(
+            icon: Badge(
+              isLabelVisible: filterTags.isNotEmpty,
+              label: Text('${filterTags.length}'),
+              child: const Icon(Icons.filter_list),
+            ),
+            tooltip: 'タグで絞り込み',
+            onPressed: () => _openFilterSheet(context, ref),
+          ),
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'privacy_policy') {
@@ -37,12 +107,29 @@ class RecordListPage extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
-        child: recordsAsync.when(
+        child: Column(
+          children: [
+            if (filterTags.isNotEmpty)
+              _ActiveFilterBar(
+                tags: filterTags,
+                onRemove: (tag) {
+                  final updated = List<String>.from(filterTags)..remove(tag);
+                  ref.read(filterTagsProvider.notifier).state = updated;
+                },
+                onClear: () =>
+                    ref.read(filterTagsProvider.notifier).state = [],
+              ),
+            Expanded(
+              child: recordsAsync.when(
           data: (records) {
             debugPrint('Records count: ${records.length}');
             return records.isEmpty
-                ? const Center(
-                    child: Text('記録がありません'),
+                ? Center(
+                    child: Text(
+                      filterTags.isEmpty
+                          ? '記録がありません'
+                          : '条件に合う記録がありません',
+                    ),
                   )
                 : ListView.builder(
                     itemCount: records.length,
@@ -87,6 +174,9 @@ class RecordListPage extends ConsumerWidget {
           error: (error, stackTrace) => Center(
             child: Text('エラーが発生しました: $error'),
           ),
+              ),
+            ),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -103,6 +193,49 @@ class RecordListPage extends ConsumerWidget {
           }
         },
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+/// 一覧上部に表示する、選択中の絞り込みタグのチップ列。
+class _ActiveFilterBar extends StatelessWidget {
+  const _ActiveFilterBar({
+    required this.tags,
+    required this.onRemove,
+    required this.onClear,
+  });
+
+  final List<String> tags;
+  final ValueChanged<String> onRemove;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Row(
+        children: [
+          Expanded(
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final tag in tags)
+                  InputChip(
+                    label: Text(tag),
+                    onDeleted: () => onRemove(tag),
+                  ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: onClear,
+            child: const Text('クリア'),
+          ),
+        ],
       ),
     );
   }

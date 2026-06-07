@@ -29,6 +29,7 @@ mixin _$CookingRecord {
   int get rating =>
       throw _privateConstructorUsedError; // 0: ★なし、1: ★、2: ★★、3: ★★★
   String? get referenceUrl => throw _privateConstructorUsedError;
+  List<String> get tags => throw _privateConstructorUsedError;
 
   /// Serializes this CookingRecord to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -55,6 +56,7 @@ abstract class $CookingRecordCopyWith<$Res> {
     String? photoPath,
     int rating,
     String? referenceUrl,
+    List<String> tags,
   });
 }
 
@@ -80,6 +82,7 @@ class _$CookingRecordCopyWithImpl<$Res, $Val extends CookingRecord>
     Object? photoPath = freezed,
     Object? rating = null,
     Object? referenceUrl = freezed,
+    Object? tags = null,
   }) {
     return _then(
       _value.copyWith(
@@ -111,6 +114,10 @@ class _$CookingRecordCopyWithImpl<$Res, $Val extends CookingRecord>
                 ? _value.referenceUrl
                 : referenceUrl // ignore: cast_nullable_to_non_nullable
                       as String?,
+            tags: null == tags
+                ? _value.tags
+                : tags // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
           )
           as $Val,
     );
@@ -134,6 +141,7 @@ abstract class _$$CookingRecordImplCopyWith<$Res>
     String? photoPath,
     int rating,
     String? referenceUrl,
+    List<String> tags,
   });
 }
 
@@ -158,6 +166,7 @@ class __$$CookingRecordImplCopyWithImpl<$Res>
     Object? photoPath = freezed,
     Object? rating = null,
     Object? referenceUrl = freezed,
+    Object? tags = null,
   }) {
     return _then(
       _$CookingRecordImpl(
@@ -189,6 +198,10 @@ class __$$CookingRecordImplCopyWithImpl<$Res>
             ? _value.referenceUrl
             : referenceUrl // ignore: cast_nullable_to_non_nullable
                   as String?,
+        tags: null == tags
+            ? _value._tags
+            : tags // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
       ),
     );
   }
@@ -205,7 +218,8 @@ class _$CookingRecordImpl implements _CookingRecord {
     this.photoPath,
     this.rating = 0,
     this.referenceUrl,
-  });
+    final List<String> tags = const <String>[],
+  }) : _tags = tags;
 
   factory _$CookingRecordImpl.fromJson(Map<String, dynamic> json) =>
       _$$CookingRecordImplFromJson(json);
@@ -226,10 +240,18 @@ class _$CookingRecordImpl implements _CookingRecord {
   // 0: ★なし、1: ★、2: ★★、3: ★★★
   @override
   final String? referenceUrl;
+  final List<String> _tags;
+  @override
+  @JsonKey()
+  List<String> get tags {
+    if (_tags is EqualUnmodifiableListView) return _tags;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_tags);
+  }
 
   @override
   String toString() {
-    return 'CookingRecord(id: $id, dishName: $dishName, memo: $memo, createdAt: $createdAt, photoPath: $photoPath, rating: $rating, referenceUrl: $referenceUrl)';
+    return 'CookingRecord(id: $id, dishName: $dishName, memo: $memo, createdAt: $createdAt, photoPath: $photoPath, rating: $rating, referenceUrl: $referenceUrl, tags: $tags)';
   }
 
   @override
@@ -247,7 +269,8 @@ class _$CookingRecordImpl implements _CookingRecord {
                 other.photoPath == photoPath) &&
             (identical(other.rating, rating) || other.rating == rating) &&
             (identical(other.referenceUrl, referenceUrl) ||
-                other.referenceUrl == referenceUrl));
+                other.referenceUrl == referenceUrl) &&
+            const DeepCollectionEquality().equals(other._tags, _tags));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -261,6 +284,7 @@ class _$CookingRecordImpl implements _CookingRecord {
     photoPath,
     rating,
     referenceUrl,
+    const DeepCollectionEquality().hash(_tags),
   );
 
   /// Create a copy of CookingRecord
@@ -286,6 +310,7 @@ abstract class _CookingRecord implements CookingRecord {
     final String? photoPath,
     final int rating,
     final String? referenceUrl,
+    final List<String> tags,
   }) = _$CookingRecordImpl;
 
   factory _CookingRecord.fromJson(Map<String, dynamic> json) =
@@ -305,6 +330,8 @@ abstract class _CookingRecord implements CookingRecord {
   int get rating; // 0: ★なし、1: ★、2: ★★、3: ★★★
   @override
   String? get referenceUrl;
+  @override
+  List<String> get tags;
 
   /// Create a copy of CookingRecord
   /// with the given fields replaced by the non-null parameter values.

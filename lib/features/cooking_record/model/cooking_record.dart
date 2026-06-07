@@ -13,6 +13,7 @@ class CookingRecord with _$CookingRecord {
     String? photoPath,
     @Default(0) int rating,  // 0: ★なし、1: ★、2: ★★、3: ★★★
     String? referenceUrl,
+    @Default(<String>[]) List<String> tags,
   }) = _CookingRecord;
 
   factory CookingRecord.fromJson(Map<String, dynamic> json) =>

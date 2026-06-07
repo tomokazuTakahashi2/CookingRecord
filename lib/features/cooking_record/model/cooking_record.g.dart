@@ -15,6 +15,9 @@ _$CookingRecordImpl _$$CookingRecordImplFromJson(Map<String, dynamic> json) =>
       photoPath: json['photoPath'] as String?,
       rating: (json['rating'] as num?)?.toInt() ?? 0,
       referenceUrl: json['referenceUrl'] as String?,
+      tags:
+          (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+          const <String>[],
     );
 
 Map<String, dynamic> _$$CookingRecordImplToJson(_$CookingRecordImpl instance) =>
@@ -26,4 +29,5 @@ Map<String, dynamic> _$$CookingRecordImplToJson(_$CookingRecordImpl instance) =>
       'photoPath': instance.photoPath,
       'rating': instance.rating,
       'referenceUrl': instance.referenceUrl,
+      'tags': instance.tags,
     };

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,22 @@ final cookingRecordRepositoryProvider = Provider<CookingRecordRepository>(
 
 class CookingRecordRepository {
   final dbHelper = DatabaseHelper.instance;
+
+  // タグはJSON文字列としてDBに保存する
+  static List<String> _decodeTags(Object? raw) {
+    if (raw == null || (raw is String && raw.isEmpty)) return const [];
+    try {
+      final decoded = jsonDecode(raw as String);
+      if (decoded is List) {
+        return decoded.map((e) => e.toString()).toList();
+      }
+    } catch (e) {
+      debugPrint('Failed to decode tags: $e');
+    }
+    return const [];
+  }
+
+  static String _encodeTags(List<String> tags) => jsonEncode(tags);
 
   Future<List<CookingRecord>> getRecords() async {
     final db = await dbHelper.database;
@@ -46,6 +63,7 @@ class CookingRecordRepository {
         'photoPath': fullPhotoPath,
         'rating': record[DatabaseHelper.columnRating] as int? ?? 0,
         'referenceUrl': record[DatabaseHelper.columnReferenceUrl] as String?,
+        'tags': _decodeTags(record[DatabaseHelper.columnTags]),
       });
     }).toList();
   }
@@ -96,9 +114,10 @@ class CookingRecordRepository {
         DatabaseHelper.columnCreatedAt: record.createdAt.toIso8601String(),
         DatabaseHelper.columnRating: record.rating,
         DatabaseHelper.columnReferenceUrl: record.referenceUrl,
+        DatabaseHelper.columnTags: _encodeTags(record.tags),
       },
     );
-    
+
       final endTime = DateTime.now();
       final duration = endTime.difference(startTime);
       debugPrint('REPOSITORY: Completed addRecord() in ${duration.inMilliseconds}ms');
@@ -151,6 +170,7 @@ class CookingRecordRepository {
         DatabaseHelper.columnMemo: record.memo,
         DatabaseHelper.columnRating: record.rating,
         DatabaseHelper.columnReferenceUrl: record.referenceUrl,
+        DatabaseHelper.columnTags: _encodeTags(record.tags),
       },
       where: '${DatabaseHelper.columnId} = ?',
       whereArgs: [record.id],
@@ -182,9 +202,10 @@ class CookingRecordRepository {
           DatabaseHelper.columnCreatedAt: record.createdAt.toIso8601String(),
           DatabaseHelper.columnRating: record.rating,
           DatabaseHelper.columnReferenceUrl: record.referenceUrl,
+          DatabaseHelper.columnTags: _encodeTags(record.tags),
         },
       );
-      
+
       debugPrint('REPOSITORY: Direct save completed successfully');
       return true;
     } catch (e) {

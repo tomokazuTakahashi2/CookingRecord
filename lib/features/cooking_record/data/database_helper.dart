@@ -5,7 +5,7 @@ import 'dart:io';
 
 class DatabaseHelper {
   static const _databaseName = "cooking_record.db";
-  static const _databaseVersion = 3;
+  static const _databaseVersion = 4;
 
   static const table = 'cooking_records';
 
@@ -16,6 +16,7 @@ class DatabaseHelper {
   static const columnCreatedAt = 'created_at';
   static const columnRating = 'rating';
   static const columnReferenceUrl = 'reference_url';
+  static const columnTags = 'tags';
 
   // シングルトンクラスにする
   DatabaseHelper._privateConstructor();
@@ -50,7 +51,8 @@ class DatabaseHelper {
         $columnMemo TEXT,
         $columnCreatedAt TEXT NOT NULL,
         $columnRating INTEGER NOT NULL DEFAULT 0,
-        $columnReferenceUrl TEXT
+        $columnReferenceUrl TEXT,
+        $columnTags TEXT
       )
     ''');
   }
@@ -64,6 +66,11 @@ class DatabaseHelper {
     if (oldVersion < 3) {
       await db.execute('''
         ALTER TABLE $table ADD COLUMN $columnReferenceUrl TEXT
+      ''');
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+        ALTER TABLE $table ADD COLUMN $columnTags TEXT
       ''');
     }
   }

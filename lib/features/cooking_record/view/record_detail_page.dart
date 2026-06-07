@@ -30,6 +30,7 @@ class RecordDetailPage extends StatelessWidget {
 料理名: ${record.dishName}
 評価: $rating
 作成日時: ${_formatDate(record.createdAt)}
+${record.tags.isNotEmpty ? '\nタグ: ${record.tags.join('、')}' : ''}
 ${record.memo != null && record.memo!.isNotEmpty ? '\nメモ:\n${record.memo}' : ''}
 ${record.referenceUrl != null && record.referenceUrl!.isNotEmpty ? '\n参考URL:\n${record.referenceUrl}' : ''}
 ''';
@@ -103,6 +104,25 @@ ${record.referenceUrl != null && record.referenceUrl!.isNotEmpty ? '\n参考URL:
                 Text(
                   record.memo!,
                   style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+              if (record.tags.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Text(
+                  'タグ',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final tag in record.tags)
+                      Chip(label: Text(tag)),
+                  ],
                 ),
               ],
               if (record.referenceUrl != null && record.referenceUrl!.isNotEmpty) ...[

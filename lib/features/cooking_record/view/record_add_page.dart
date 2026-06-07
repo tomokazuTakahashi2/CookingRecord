@@ -12,6 +12,7 @@ import 'package:cooking_record/app/utils.dart';
 import 'package:cooking_record/features/cooking_record/widget/placeholder_image.dart';
 import 'package:cooking_record/features/cooking_record/widget/header_app_bar.dart';
 import 'package:cooking_record/features/cooking_record/widget/rating_stars.dart';
+import 'package:cooking_record/features/cooking_record/widget/tag_selector.dart';
 import 'package:go_router/go_router.dart';
 
 class RecordAddPage extends ConsumerStatefulWidget {
@@ -28,6 +29,7 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
   final _referenceUrlController = TextEditingController();
   String? _imagePath;
   int _rating = 0;
+  List<String> _tags = [];
   bool _isSaving = false; // ボタン保存状態を管理
   bool _isNewImagePick = false; // 新たに選択した画像かどうか
 
@@ -247,6 +249,15 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                   maxLines: 3,
                 ),
                 const SizedBox(height: 16),
+                TagSelector(
+                  selectedTags: _tags,
+                  onChanged: (tags) {
+                    setState(() {
+                      _tags = tags;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _referenceUrlController,
                   decoration: InputDecoration(
@@ -351,6 +362,7 @@ class _RecordAddPageState extends ConsumerState<RecordAddPage> {
                             photoPath: savedImagePath,
                             rating: _rating,
                             referenceUrl: _referenceUrlController.text.isEmpty ? null : _referenceUrlController.text,
+                            tags: _tags,
                           );
                           
                           try {

@@ -7,6 +7,23 @@ final cookingRecordsProvider = AsyncNotifierProvider<CookingRecordsNotifier, Lis
   CookingRecordsNotifier.new
 );
 
+/// 一覧画面で選択中の絞り込みタグ。空の場合は絞り込みなし（全件表示）。
+final filterTagsProvider = StateProvider<List<String>>((ref) => <String>[]);
+
+/// 絞り込みタグを適用した記録一覧。
+/// 選択タグを「すべて含む」(AND) 記録のみを返す。
+final filteredRecordsProvider = Provider<AsyncValue<List<CookingRecord>>>((ref) {
+  final recordsAsync = ref.watch(cookingRecordsProvider);
+  final filterTags = ref.watch(filterTagsProvider);
+
+  return recordsAsync.whenData((records) {
+    if (filterTags.isEmpty) return records;
+    return records
+        .where((record) => filterTags.every((tag) => record.tags.contains(tag)))
+        .toList();
+  });
+});
+
 class CookingRecordsNotifier extends AsyncNotifier<List<CookingRecord>> {
   // Use getter instead of field to avoid build() issues
   CookingRecordRepository get _repo => ref.read(cookingRecordRepositoryProvider);

@@ -10,6 +10,7 @@ import 'package:cooking_record/features/cooking_record/provider/cooking_record_p
 import 'package:cooking_record/features/cooking_record/widget/placeholder_image.dart';
 import 'package:cooking_record/features/cooking_record/widget/header_app_bar.dart';
 import 'package:cooking_record/features/cooking_record/widget/rating_stars.dart';
+import 'package:cooking_record/features/cooking_record/widget/tag_selector.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cooking_record/app/utils.dart';
 
@@ -32,6 +33,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
   late final TextEditingController _referenceUrlController;
   String? _imagePath;
   late int _rating;
+  late List<String> _tags;
   bool _isEdited = false;
   bool _isSaving = false; // 保存中の状態を管理
   bool _isNewImagePick = false; // 新たに選択した画像かどうか
@@ -48,7 +50,14 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
         _memoController.text != (widget.record.memo ?? '') ||
         _referenceUrlController.text != (widget.record.referenceUrl ?? '') ||
         _imagePath != widget.record.photoPath ||
-        _rating != widget.record.rating;
+        _rating != widget.record.rating ||
+        !_tagsEqual(_tags, widget.record.tags);
+  }
+
+  bool _tagsEqual(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    final setA = a.toSet();
+    return setA.length == b.toSet().length && setA.containsAll(b);
   }
   
   // URLバリデーション関数を共通化
@@ -113,6 +122,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
       ..addListener(_onTextChanged);
     _imagePath = widget.record.photoPath;
     _rating = widget.record.rating;
+    _tags = List<String>.from(widget.record.tags);
   }
 
   @override
@@ -279,6 +289,16 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                   maxLines: 3,
                 ),
                 const SizedBox(height: 16),
+                TagSelector(
+                  selectedTags: _tags,
+                  onChanged: (tags) {
+                    setState(() {
+                      _tags = tags;
+                      _isEdited = true;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _referenceUrlController,
                   decoration: InputDecoration(
@@ -396,6 +416,7 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                                   photoPath: savedImagePath ?? (_isNewImagePick ? _imagePath : widget.record.photoPath),
                                   rating: _rating,
                                   referenceUrl: _referenceUrlController.text.isEmpty ? null : _referenceUrlController.text,
+                                  tags: _tags,
                                 );
 
                                 debugPrint('SAVE: before updateRecord');
