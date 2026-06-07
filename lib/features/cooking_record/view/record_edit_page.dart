@@ -11,6 +11,7 @@ import 'package:cooking_record/features/cooking_record/widget/placeholder_image.
 import 'package:cooking_record/features/cooking_record/widget/header_app_bar.dart';
 import 'package:cooking_record/features/cooking_record/widget/rating_stars.dart';
 import 'package:cooking_record/features/cooking_record/widget/tag_selector.dart';
+import 'package:cooking_record/features/cooking_record/widget/numbered_list_input_formatter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cooking_record/app/utils.dart';
 
@@ -286,7 +287,10 @@ class _RecordEditPageState extends ConsumerState<RecordEditPage> {
                     border: OutlineInputBorder(),
                   ),
                   validator: null,
-                  maxLines: 3,
+                  maxLines: null,
+                  minLines: 3,
+                  keyboardType: TextInputType.multiline,
+                  inputFormatters: [NumberedListInputFormatter()],
                 ),
                 const SizedBox(height: 16),
                 TagSelector(
